@@ -1,0 +1,65 @@
+{
+  "name": "siteparser",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "cssnano": "^4.1.10",
+    "dotenv": "^8.2.0",
+    "koa": "^2.11.0",
+    "koa-body": "^4.1.1",
+    "koa-compress": "^3.0.0",
+    "koa-pug": "^4.0.3",
+    "koa-router": "^8.0.8",
+    "koa-static": "^5.0.0",
+    "mysql2": "^2.1.0",
+    "node-html-parser": "^1.2.15",
+    "precompress": "^6.2.2",
+    "qs": "^6.9.3",
+    "sqlite3": "^4.1.1",
+    "typeorm": "^0.2.24"
+  },
+  "scripts": {
+    "start": "node ./dist/index.js",
+    "browsersync": "node browsersync.js",
+    "bs": "yarn watch & yarn browsersync",
+    "build": "yarn build:ts & yarn build:css && yarn build:compress",
+    "build:ts": "tsc",
+    "build:css": "NODE_ENV=production postcss --config postcss.config.js styles/main.css -o public/app.css",
+    "build:compress": "precompress public/*",
+    "watch:css": "NODE_ENV=development postcss --config postcss.config.js styles/main.css -o public/app.css -w",
+    "watch:ts": "tsnd --respawn ./src/index.ts",
+    "watch": "yarn watch:css & yarn watch:ts"
+  },
+  "engines": {
+    "node": ">=13.10.0",
+    "yarn": ">=1.22.4"
+  },
+  "browserslist": [
+    "> 2%",
+    "not IE <=11"
+  ],
+  "prettier": {
+    "useTabs": true,
+    "printWidth": 90,
+    "endOfLine": "auto",
+    "tabWidth": 2
+  },
+  "devDependencies": {
+    "@types/axios": "^0.14.0",
+    "@types/form-data": "^2.5.0",
+    "@types/koa": "^2.11.3",
+    "@types/koa-router": "^7.4.0",
+    "@types/koa-static": "^4.0.1",
+    "@types/node": "^13.11.1",
+    "browser-sync": "^2.26.7",
+    "compression": "^1.7.4",
+    "postcss": "^7.0.27",
+    "postcss-cli": "^7.1.0",
+    "postcss-import": "^12.0.1",
+    "postcss-preset-env": "^6.7.0",
+    "ts-node-dev": "^1.0.0-pre.44",
+    "typescript": "^3.8.3"
+  }
+}
