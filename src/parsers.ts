@@ -50,6 +50,10 @@ export function parseType(text: string) {
 	} else return "article";
 }
 
+/**
+ * Parse an article
+ * @param text valid html
+ */
 export function parseArticle(text: string) {
 	try {
 		let html = parse(text) as HTMLElement;
@@ -64,14 +68,21 @@ export function parseArticle(text: string) {
 
 		// Parse date and author of submission
 		let submittedElement = html.querySelector(".meta .submitted");
-		let submitted = submittedElement.text;
+		if (!submittedElement) submittedElement = html.querySelector(".node .submitted");
+		let submitted = submittedElement?.text;
 
 		// let submissionDate, author;
-		let { date, author } = parseSubmission(submitted);
+		let date, author;
+		if (submitted) {
+			let submisson = parseSubmission(submitted);
+			date = submisson.date;
+			author = submisson.author;
+		} 
 
 		// parse content of the article and remove voting widget
-		let contentElement = html.querySelector(".node.sticky.clear-block .content");
-		contentElement.removeChild(contentElement.querySelector(".fivestar-widget")); 
+		let contentElement = html.querySelector(".node .content");
+		let thisStupidForm = contentElement.querySelector(".fivestar-widget");
+		if (thisStupidForm) contentElement.removeChild(thisStupidForm); 
 		let content = contentElement.innerHTML;
 
 		// parse comments
@@ -111,7 +122,7 @@ export function parseArticle(text: string) {
 			comments: comments,
 		};
 
-		// console.log(page)
+		console.log(comments);
 		return page;
 	} catch (err) {
 		console.log(err);
@@ -121,6 +132,10 @@ export function parseArticle(text: string) {
 	}
 }
 
+/**
+ * Parse article list
+ * @param text valid html
+ */
 export function parseArticleList(text: string) {
 	let html = parse(text) as HTMLElement;
 
@@ -142,6 +157,7 @@ export function parseArticleList(text: string) {
 
 	// Parse pages list
 	let content = html.querySelectorAll(".view-content .views-row div");
+	if (!content[0]) content = html.querySelectorAll(".clear-block .node");
 	let pages = content.map((element: HTMLElement) => {
 		let titleElement = element.querySelector("h2 a");
 		let title = titleElement.text;
@@ -158,7 +174,8 @@ export function parseArticleList(text: string) {
 
 		// Parse excerpt and remove rating
 		let contentElement = element.querySelector(".content");
-		contentElement.removeChild(contentElement.querySelector(".fivestar-widget")); 
+		let thisStupidForm = contentElement.querySelector(".fivestar-widget");
+		if (thisStupidForm) contentElement.removeChild(thisStupidForm); 
 		let excerpt = contentElement.innerHTML;
 		
 		// Parse amount of comments

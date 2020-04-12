@@ -11,17 +11,15 @@ html(lang="en")
 
         if title
             h1.centered-text #{title}
-        if author
-            h2 Автор #{author}
-        if date
-            | Последнее обновление #{date}
         if content 
             | !{content}
 
         if pages 
             each page in pages
                 a(href=page.link): h2 #{page.title}
-                span #{page.author || ""}  #{page.commentCount}  комментариев
+                span #{page.author || ""} @#{moment(page.date).lang("ru").format('LLL')}
+                if page.commentCount
+                    div: i #{page.commentCount} комментариев 
                 p !{page.excerpt}
 
         if currentPage

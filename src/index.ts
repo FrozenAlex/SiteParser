@@ -7,8 +7,6 @@ import * as path from "path";
 import * as Pug from "koa-pug";
 import * as koaStatic from "koa-static";
 
-import Axios from "axios";
-import { parse, HTMLElement } from "node-html-parser";
 import { createConnection } from "typeorm";
 import { Cookie } from "./entity/Cookie";
 import * as Router from "koa-router";
@@ -37,6 +35,9 @@ const pug = new Pug({
 	locals: {
 		/* variables and helpers */
 	},
+	helperPath: [
+		{moment: require("moment")}
+	],
 	basedir: __dirname + "../views",
 	app: app, // Binding `ctx.render()`, equals to pug.use(app)
 	cache: process.env.NODE_ENV === "production",
@@ -68,6 +69,53 @@ router.get("/content/:article", async (ctx, next) => {
 		});
 	}
 });
+
+router.get("/node/:article", async (ctx, next) => {
+	let url = "http://www.it-starter.ru" + ctx.url;
+	try {
+		let source = await getPage(url);
+		let type = parseType(source);
+		if (type == "article") {
+			let page = await parseArticle(source);
+			await ctx.render("article", { ...page });
+		}	else {
+			let page = parseArticleList(source);
+			await ctx.render("list", { ...page });
+		}
+	} catch (err) {
+		console.log(err);
+		await ctx.render("error", {
+			error: {
+				message: err.message || "Ошибочка",
+				code: err.code || "500",
+			},
+		});
+	}
+});
+
+router.get("/node", async (ctx, next) => {
+	let url = "http://www.it-starter.ru" + ctx.url;
+	try {
+		let source = await getPage(url);
+		let type = parseType(source);
+		if (type == "article") {
+			let page = await parseArticle(source);
+			await ctx.render("article", { ...page });
+		}	else {
+			let page = parseArticleList(source);
+			await ctx.render("list", { ...page });
+		}
+	} catch (err) {
+		console.log(err);
+		await ctx.render("error", {
+			error: {
+				message: err.message || "Ошибочка",
+				code: err.code || "500",
+			},
+		});
+	}
+});
+
 app.use(router.routes());
 
 async function main() {

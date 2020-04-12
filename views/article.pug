@@ -14,7 +14,7 @@ html(lang="en")
         if author
             h2.description.centered-text #{author}
         if date
-            h3.description.centered-text #{date}
+            h3.description.centered-text #{moment(date).lang("ru").format('LLL')}
         if content 
             | !{content}
 
@@ -24,7 +24,7 @@ html(lang="en")
                 each comment in comments
                     .comment(style="margin:10px auto; padding: 10px;  background: #fff") 
                         h3 !{comment.title}
-                        h4.description #{comment.author} - #{comment.date}
+                        h4.description #{comment.author} - #{moment(comment.date).lang("ru").fromNow()}
 
                         p !{comment.content}
         else

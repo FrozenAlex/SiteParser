@@ -10,6 +10,7 @@ body{
 
 .centered-text {
     text-align: center;
+    display: block;
 }
 
 .geshifilter {
