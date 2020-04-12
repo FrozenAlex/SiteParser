@@ -5,8 +5,8 @@
 The application receives following parameters
 
 ```bash
-USER="Username"
-PASS="Password"
+USERNAME="Username"
+PASSWORD="Password"
 DB_TYPE="mysql"
 DB_NAME="auth"
 DB_HOST="localhost"

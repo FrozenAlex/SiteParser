@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport" content="width=device-width, initial-scale=1.0")
+        title #{title ||  "Article"}
+        link(rel="stylesheet" href="/app.css")
+    body
+        if header
+            | !{header}
+
+        if title
+            h1.centered-text #{title}
+        if author
+            h2.description.centered-text #{author}
+        if date
+            h3.description.centered-text #{date}
+        if content 
+            | !{content}
+
+        if comments[0]
+            #comments
+                h1.centered-text(style="margin-top: 20px") Комментарии
+                each comment in comments
+                    .comment(style="margin:10px auto; padding: 10px;  background: #fff") 
+                        h3 !{comment.title}
+                        h4.description #{comment.author} - #{comment.date}
+
+                        p !{comment.content}
+        else
+            h1.centered-text Комментариев пока нет 

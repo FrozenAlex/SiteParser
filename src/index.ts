@@ -9,54 +9,11 @@ import * as koaStatic from "koa-static";
 
 import Axios from "axios";
 import { parse, HTMLElement } from "node-html-parser";
-import getAuthCookie, { fakeHeaders } from "./auth";
 import { createConnection } from "typeorm";
 import { Cookie } from "./entity/Cookie";
 import * as Router from "koa-router";
-
-let credentials = {
-	username: process.env.USERNAME,
-	password: process.env.PASSWORD,
-};
-
-console.log(credentials)
-// URL
-//
-
-async function parseMainArticlesPage(
-	url = "http://www.it-starter.ru/content/%D0%B0%D0%B3%D1%8320181%D0%BF%D0%BC1"
-) {
-	let cookie = await getAuthCookie(credentials);
-	console.log(cookie)
-	try {
-		let result = await Axios.get(url, {
-			headers: {
-				...fakeHeaders,
-				Cookie: cookie.value,
-			},
-		});
-
-		let html = parse(result.data);
-
-		// Assume that it's a list
-		let page = {
-			type: "list",
-			content: null
-		}
-
-		page.content = (html as HTMLElement).querySelector(".view-content");
-		if (!page.content) {
-			page.type = "article";
-			page.content = (html as HTMLElement).querySelector(".right-corner .left-corner");
-		}
-		return page;
-	} catch (err) {
-		console.log(err)
-		if (err.response) {
-			throw { code: err.response.status, message: "Ошибка" };
-		}
-	}
-}
+import { parseArticle, parseType, parseArticleList } from "./parsers";
+import { getPage } from "./auth";
 
 const app = new Koa();
 app.keys = ["Very Secret Key"];
@@ -91,13 +48,18 @@ router.get("/", async (ctx, next) => {
 });
 router.get("/content/:article", async (ctx, next) => {
 	let url = "http://www.it-starter.ru" + ctx.url;
-
 	try {
-		let page = await parseMainArticlesPage(url);
-		console.log(page)
-		await ctx.render("content", { content: page.content });
+		let source = await getPage(url);
+		let type = parseType(source);
+		if (type == "article") {
+			let page = await parseArticle(source);
+			await ctx.render("article", { ...page });
+		}	else {
+			let page = parseArticleList(source);
+			await ctx.render("list", { ...page });
+		}
 	} catch (err) {
-		console.log(err)
+		console.log(err);
 		await ctx.render("error", {
 			error: {
 				message: err.message || "Ошибочка",

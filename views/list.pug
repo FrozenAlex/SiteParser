@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport" content="width=device-width, initial-scale=1.0")
+        title #{title ||  "Article"}
+        link(rel="stylesheet" href="/app.css")
+    body
+        if header
+            | !{header}
+
+        if title
+            h1.centered-text #{title}
+        if author
+            h2 Автор #{author}
+        if date
+            | Последнее обновление #{date}
+        if content 
+            | !{content}
+
+        if pages 
+            each page in pages
+                a(href=page.link): h2 #{page.title}
+                span #{page.author || ""}  #{page.commentCount}  комментариев
+                p !{page.excerpt}
+
+        if currentPage
+            .pager
+                | Текущая страница #{currentPage} из #{pagesCount}
+                .pagination
+                    - var n = 1;
+                    while n <= pagesCount
+                        if n==1
+                            a(href=`?`) #{n}
+                        else
+                            a(href=`?page=${n-1}`) #{n}
+                        - n++
+                

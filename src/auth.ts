@@ -1,8 +1,13 @@
 import Axios from "axios";
 import { parse, HTMLElement } from "node-html-parser";
 import * as qs from "qs";
-import { getManager, getRepository, MoreThan } from "typeorm";
+import {  getRepository, MoreThan } from "typeorm";
 import { Cookie } from "./entity/Cookie";
+
+let defaultCredentials = {
+	username: process.env.USERNAME,
+	password: process.env.PASSWORD,
+};
 
 export let fakeHeaders = {
 	"User-Agent":
@@ -86,3 +91,17 @@ export let parseSetCookie = (cookieString: string) => {
 		expires: new Date(expires),
 	};
 };
+
+export async function getPage(
+	url = "http://www.it-starter.ru/content/%D0%B0%D0%B3%D1%8320181%D0%BF%D0%BC1",
+	credentials = defaultCredentials
+) {
+	let cookie = await getAuthCookie(credentials);
+	let result = await Axios.get(url, {
+		headers: {
+			...fakeHeaders,
+			Cookie: cookie.value,
+		},
+	});
+	return result.data;
+}
