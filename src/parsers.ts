@@ -69,8 +69,9 @@ export function parseArticle(text: string) {
 		// let submissionDate, author;
 		let { date, author } = parseSubmission(submitted);
 
-		// parse content of the article
+		// parse content of the article and remove voting widget
 		let contentElement = html.querySelector(".node.sticky.clear-block .content");
+		contentElement.removeChild(contentElement.querySelector(".fivestar-widget")); 
 		let content = contentElement.innerHTML;
 
 		// parse comments

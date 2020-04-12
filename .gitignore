@@ -3,3 +3,4 @@ data/*.sqlite
 .env
 public/
 dist/
+yarn-error.log
