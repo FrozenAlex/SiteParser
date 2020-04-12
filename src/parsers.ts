@@ -90,8 +90,8 @@ export function parseArticle(text: string) {
 			// Get comment content
 			// TODO: Remove not needed html tags and clean it up
 			let contentElement = element.querySelector(".content");
+			contentElement.removeChild(contentElement.querySelector(".fivestar-widget")); 
 			let content = contentElement.innerHTML;
-
 			return {
 				id,
 				title,
@@ -155,10 +155,11 @@ export function parseArticleList(text: string) {
 			author = parsedSubmission.author;
 		}
 
-		// Parse excerpt
+		// Parse excerpt and remove rating
 		let contentElement = element.querySelector(".content");
+		contentElement.removeChild(contentElement.querySelector(".fivestar-widget")); 
 		let excerpt = contentElement.innerHTML;
-
+		
 		// Parse amount of comments
 		let countElement = element.querySelector(".comment_comments.last");
 		let commentCount = 0;
