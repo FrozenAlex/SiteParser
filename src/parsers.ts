@@ -121,8 +121,6 @@ export function parseArticle(text: string) {
 			content: content,
 			comments: comments,
 		};
-
-		console.log(comments);
 		return page;
 	} catch (err) {
 		console.log(err);
