@@ -1,4 +1,5 @@
-# A simple authenticated proxy server
+# A simple authenticated proxy server 
+![Node.js CI](https://github.com/FrozenAlex/SiteParser/workflows/Node.js%20CI/badge.svg)
 
 ## Environment variables
 
