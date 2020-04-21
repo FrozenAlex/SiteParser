@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "postcss-loader": "^3.0.0",
-    "precompress": "^6.2.2",
+    "precompress": "^6.2.4",
     "ts-jest": "^25.4.0",
     "ts-loader": "^7.0.1",
     "webpack-cli": "^3.3.11",
