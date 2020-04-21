@@ -7932,10 +7932,10 @@ postcss@^7.0.0, postcss@^7.0.1, postcss@^7.0.14, postcss@^7.0.16, postcss@^7.0.1
     source-map "^0.6.1"
     supports-color "^6.1.0"
 
-precompress@^6.2.2:
-  version "6.2.2"
-  resolved "https://registry.yarnpkg.com/precompress/-/precompress-6.2.2.tgz#efd5d025f7f75a6607bbe89876b2ed6e01b36328"
-  integrity sha512-aVr/dNyUU9nH32csOz6bR5+YRN6gJgjFZtbHPdgnv33ZpffVPMjxszTMVipT3ZxaLND5rymDnDhx+zv5cIBykA==
+precompress@^6.2.4:
+  version "6.2.4"
+  resolved "https://registry.yarnpkg.com/precompress/-/precompress-6.2.4.tgz#9e6de0c43b7f54c919075c629e9c22891a8605f4"
+  integrity sha512-OX6ykR5E+jboom/Et9Wna1QkV43o7B+LY08/F3Tb7DOTgs0Oy169U3aJDsQfXS7O1P18aJI3QRgqsRCJuCa0gQ==
 
 prelude-ls@~1.1.2:
   version "1.1.2"
