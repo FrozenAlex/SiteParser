@@ -85,6 +85,6 @@
     "terser-webpack-plugin": "^2.3.5",
     "ts-node-dev": "^1.0.0-pre.44",
     "typescript": "^3.8.3",
-    "webpack": "^4.42.1"
+    "webpack": "^4.43.0"
   }
 }
