@@ -1,8 +1,13 @@
 import parse, { HTMLElement } from "node-html-parser";
+import Post from "./entity/Post";
+import Topic from "./entity/Topic";
+import Comment from "./entity/Comment";
 const moment = require("moment");
 
 const dateFormat = /(\d\d\/\d\d\/\d{4}\s-\s\d\d:\d\d)/g;
 const nameFormat = /— ([А-яA-z .]+)/;
+
+export interface ArticleHeaders {}
 
 interface Page {
 	slug?: string;
@@ -12,7 +17,7 @@ interface Page {
 	content?: string;
 	excerpt?: string;
 	author?: string;
-	comments?: Array<Comment>;
+	comments?: Comment[];
 	commentCount?: number;
 }
 
@@ -22,14 +27,10 @@ interface PageList {
 	currentPage?: number;
 }
 
-interface Comment {
-	id?: number;
-	title?: string;
-	date?: Date;
-	author?: string;
-	content?: string;
-}
-
+/**
+ * Parse date and author name
+ * @param submitted text of the sub
+ */
 export function parseSubmission(submitted: string) {
 	let parsedDate = submitted.match(/(\d\d\/\d\d\/\d{4}\s-\s\d\d:\d\d)/g);
 	let parsedAuthor = submitted.match(/— ([А-яA-z ]+)/);
@@ -53,18 +54,23 @@ export function parseType(text: string) {
 /**
  * Parse an article
  * @param text valid html
+ * @param basePost Post object to extend
  */
-export function parseArticle(text: string) {
+export function parseArticle(text: string, basePost: Partial<Post> = null) {
 	try {
+		// Parse the html
 		let html = parse(text) as HTMLElement;
+
+		// Create a post
+		let post = basePost || new Post();
 
 		// Parse article title
 		let titleElement = html.querySelector("head title");
-		let title = titleElement.text.replace(" | IT- STARTER", ""); // Remove it starter from it
+		post.title = titleElement.text.replace(" | IT- STARTER", ""); // Remove it starter from it
 
-		// Parse page header with warnings
-		let headerElement = html.querySelector("#header-region");
-		let header = headerElement.structuredText;
+		// // Parse page header with warnings
+		// let headerElement = html.querySelector("#header-region");
+		// let header = headerElement.structuredText;
 
 		// Parse date and author of submission
 		let submittedElement = html.querySelector(".meta .submitted");
@@ -77,18 +83,20 @@ export function parseArticle(text: string) {
 			let submisson = parseSubmission(submitted);
 			date = submisson.date;
 			author = submisson.author;
-		} 
+		}
+
+		post.lastUpdate = date;
+		post.author = author;
 
 		// parse content of the article and remove voting widget
 		let contentElement = html.querySelector(".node .content");
 		let thisStupidForm = contentElement.querySelector(".fivestar-widget");
-		if (thisStupidForm) contentElement.removeChild(thisStupidForm); 
-		let content = contentElement.innerHTML;
+		if (thisStupidForm) contentElement.removeChild(thisStupidForm);
+		post.content = contentElement.innerHTML;
 
-		// parse comments
+		// Parse comments
 		let commentsElement = html.querySelectorAll("#comments .comment");
-
-		let comments: Comment[] = commentsElement.map((element, index, array) => {
+		post.comments = commentsElement.map((element, index, array) => {
 			// Get comment title and unique id
 			let titleElement = element.querySelector("h3 a");
 			let title = titleElement.text;
@@ -102,26 +110,20 @@ export function parseArticle(text: string) {
 			// Get comment content
 			// TODO: Remove not needed html tags and clean it up
 			let contentElement = element.querySelector(".content");
-			contentElement.removeChild(contentElement.querySelector(".fivestar-widget")); 
+			contentElement.removeChild(contentElement.querySelector(".fivestar-widget"));
 			let content = contentElement.innerHTML;
 			return {
-				id,
-				title,
-				date,
-				author,
-				content,
+				id: id,
+				title: title,
+				lastUpdate: date,
+				author: author,
+				content: content,
+				post: post as Post, // I'm sure it has post
 			};
 		});
 
-		let page: Page = {
-			type: "article",
-			title: title,
-			date: date,
-			author: author,
-			content: content,
-			comments: comments,
-		};
-		return page;
+		post.commentCount = post.comments.length;
+		return post;
 	} catch (err) {
 		console.log(err);
 		if (err.response) {
@@ -136,6 +138,10 @@ export function parseArticle(text: string) {
  */
 export function parseArticleList(text: string) {
 	let html = parse(text) as HTMLElement;
+
+	// Parse page header
+	let headerElement = html.querySelector("#header-region");
+	let header = headerElement?.text;
 
 	// Parse list title
 	let titleElement = html.querySelector("head title");
@@ -155,7 +161,7 @@ export function parseArticleList(text: string) {
 
 	// Parse pages list
 	let content = html.querySelectorAll(".view-content .views-row div");
-	if (!content[0]) content = html.querySelectorAll(".clear-block .node");
+	if (content.length === 0) content = html.querySelectorAll(".clear-block .node");
 	let pages = content.map((element: HTMLElement) => {
 		let titleElement = element.querySelector("h2 a");
 		let title = titleElement.text;
@@ -173,9 +179,10 @@ export function parseArticleList(text: string) {
 		// Parse excerpt and remove rating
 		let contentElement = element.querySelector(".content");
 		let thisStupidForm = contentElement.querySelector(".fivestar-widget");
-		if (thisStupidForm) contentElement.removeChild(thisStupidForm); 
+		if (thisStupidForm) contentElement.removeChild(thisStupidForm);
 		let excerpt = contentElement.innerHTML;
-		
+		let readMoreElement = contentElement.querySelector(".read-more");
+
 		// Parse amount of comments
 		let countElement = element.querySelector(".comment_comments.last");
 		let commentCount = 0;
@@ -198,5 +205,25 @@ export function parseArticleList(text: string) {
 		pages: pages,
 		currentPage,
 		pagesCount,
+		header
 	};
+}
+
+export function removeHTML(text: string) {
+	let html = parse(text) as HTMLElement;
+	return html.text;
+}
+
+
+export function isArticle(html: string) {
+	let type = parseType(html);
+	return (type === "article")? true: false;
+}
+
+export function cleanUpText(text: string){
+	let html = parse(text) as HTMLElement;
+	let innerText = html.text;
+	innerText = innerText.replace(/\s\s+/g, ' '); 
+	innerText = innerText.replace(/\n\n+/g, '\n'); 
+	return innerText
 }

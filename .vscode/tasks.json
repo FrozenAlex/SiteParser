@@ -10,6 +10,13 @@
             "problemMatcher": [],
             "label": "npm: test",
             "detail": "jest"
+        },
+        {
+            "type": "npm",
+            "script": "start",
+            "problemMatcher": [],
+            "label": "npm: start",
+            "detail": "node ./dist/index.js"
         }
     ]
 }

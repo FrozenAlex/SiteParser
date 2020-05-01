@@ -3,13 +3,14 @@ html(lang="en")
     head
         meta(charset="UTF-8")
         meta(name="viewport" content="width=device-width, initial-scale=1.0")
-        title #{title ||  "Article"}
         meta(name="description", content=excerpt)
+        title #{title ||  "Article"}
         link(rel="stylesheet" href="/app.css")
     body
         if header
             | !{header}
-
+        if topic
+            a(href="/topic/"+ topic.name).centered-text #{topic.name}
         if title
             h1.centered-text #{title}
         if author
@@ -29,4 +30,4 @@ html(lang="en")
 
                         p !{comment.content}
         else
-            h1.centered-text Комментариев пока нет 
+            h1.centered-text Комментариев пока нет

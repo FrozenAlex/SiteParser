@@ -1,7 +1,7 @@
 import { Entity, Column } from "typeorm";
 
 @Entity()
-export class Cookie {
+export default class Cookie {
         @Column({
                 length: 100,
                 unique: true,

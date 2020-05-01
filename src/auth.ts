@@ -2,7 +2,7 @@ import Axios from "axios";
 import { parse, HTMLElement } from "node-html-parser";
 import * as qs from "qs";
 import {  getRepository, MoreThan } from "typeorm";
-import { Cookie } from "./entity/Cookie";
+import Cookie from "./entity/Cookie";
 
 let defaultCredentials = {
 	username: process.env.USERNAME,

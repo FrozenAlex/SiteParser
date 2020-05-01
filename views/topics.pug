@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport" content="width=device-width, initial-scale=1.0")
+        title #{title ||  "Topics"}
+        link(rel="stylesheet" href="/app.css")
+    body
+        h1.centered-text Группы
+        if topics 
+            each topic in topics
+                a(href=topic.name): h2.centered-text #{topic.name}
+                //- span #{page.author || ""} @#{moment(page.date).locale("ru").format('LLL')}
+                //- if page.commentCount
+                //-     div: i #{page.commentCount} комментариев 
+                //- p !{page.excerpt}
+        else
+            h2 Нет топиков, подождите пока админ не добавит
+        //- if currentPage
+        //-     .pager
+        //-         | Текущая страница #{currentPage} из #{pagesCount}
+        //-         .pagination
+        //-             - var n = 1;
+        //-             while n <= pagesCount
+        //-                 if n==1
+        //-                     a(href=`?`) #{n}
+        //-                 else
+        //-                     a(href=`?page=${n-1}`) #{n}
+        //-                 - n++
+                

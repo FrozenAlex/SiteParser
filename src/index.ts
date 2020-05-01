@@ -7,16 +7,25 @@ import * as path from "path";
 import * as Pug from "koa-pug";
 import * as koaStatic from "koa-static";
 
-import { createConnection } from "typeorm";
-import { Cookie } from "./entity/Cookie";
+import { createConnection, getRepository } from "typeorm";
+import Cookie from "./entity/Cookie";
 import * as Router from "koa-router";
 import { parseArticle, parseType, parseArticleList } from "./parsers";
 import { getPage } from "./auth";
+import StartBot from "./bot/telegram";
+import Topic from "./entity/Topic";
+import Post from "./entity/Post";
+import Comment from "./entity/Comment";
+import Subscription from "./entity/Subscription";
+import User from "./entity/User";
 
 const app = new Koa();
 app.keys = ["Very Secret Key"];
 
 app.use(Body());
+
+// Start telegram bot
+StartBot(app);
 
 // Serve static content
 app.use(
@@ -47,6 +56,52 @@ var router = new Router();
 router.get("/", async (ctx, next) => {
 	await ctx.render("index");
 });
+
+router.get("/topic/", async (ctx, next) => {
+	let topics = await getRepository(Topic).find();
+	
+	await ctx.render("topics", {topics});
+});
+
+router.get("/topic/:name/", async (ctx, next) => {
+	let name = ctx.params.name;
+	let topic = await getRepository(Topic).findOne({name: name}, {});
+	if (!topic) return ctx.render("Нет такого топика")
+	let posts = await getRepository(Post).find({where: {topic: topic},order:{lastUpdate:"DESC"}})
+	if (!posts) throw new Error("Нет статей")
+	topic.posts = posts;
+	await ctx.render("topicArticles", {topic});
+});
+
+router.get("/a/:url/", async (ctx, next) => {
+	let url = ctx.params.url;
+	let post = await getRepository(Post).findOne({url: url}, {
+		relations: ['topic','comments']
+	});
+	
+	console.log(post.comments)
+	await ctx.render("post", post);
+});
+
+router.get("/a/", async (ctx, next) => {
+	let url = ctx.params.url;
+	let post = await getRepository(Post).find({
+		relations: ['topic', 'comments']
+	});
+	ctx.response.type="application/json"
+	ctx.response.body = JSON.stringify(post);
+});
+
+router.get("/c/", async (ctx, next) => {
+	let url = ctx.params.url;
+	let post = await getRepository(Comment).find({
+		relations: ["post"]
+	});
+	ctx.response.type="application/json"
+	ctx.response.body = JSON.stringify(post);
+});
+
+
 router.get("/content/:article", async (ctx, next) => {
 	let url = "http://www.it-starter.ru" + ctx.url;
 	try {
@@ -121,7 +176,7 @@ app.use(router.routes());
 async function main() {
 	// @ts-ignore
 	await createConnection({
-		entities: [Cookie],
+		entities: [Cookie, Topic, Post, Comment, Subscription, User],
 		// logging: process.env.NODE_ENV !== "production",
 		synchronize: true,
 		type: process.env.DB_TYPE || "sqlite",

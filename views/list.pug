@@ -17,7 +17,7 @@ html(lang="en")
         if pages 
             each page in pages
                 a(href=page.link): h2 #{page.title}
-                span #{page.author || ""} @#{moment(page.date).lang("ru").format('LLL')}
+                span #{page.author || ""} @#{moment(page.date).locale("ru").format('LLL')}
                 if page.commentCount
                     div: i #{page.commentCount} комментариев 
                 p !{page.excerpt}
@@ -33,4 +33,3 @@ html(lang="en")
                         else
                             a(href=`?page=${n-1}`) #{n}
                         - n++
-                

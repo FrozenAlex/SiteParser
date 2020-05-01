@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport" content="width=device-width, initial-scale=1.0")
+        title #{topic.name ||  "Article"}
+        link(rel="stylesheet" href="/app.css")
+    body
+        if header
+            | !{header}
+
+        if topic.name
+            h1.centered-text #{topic.name}
+        if content 
+            | !{content}
+
+        if topic.posts 
+            each post in topic.posts
+                a(href=`/a/${post.url}`): h2 #{post.title}
+                span #{post.author || ""} @#{moment(post.lastUpdate).locale("ru").format('LLL')}
+                if post.commentCount
+                    div: i #{post.commentCount} комментариев 
+                p !{post.excerpt}
