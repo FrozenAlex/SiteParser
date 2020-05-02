@@ -1,4 +1,4 @@
-FROM node:13-alpine
+FROM node:14-alpine
 
 WORKDIR /app
 
@@ -8,15 +8,11 @@ WORKDIR /app
 COPY package*.json ./
 COPY yarn.lock ./
 
-RUN yarn install
+# the files should be built before building a docker image
+RUN yarn install --production --cache-folder ./ycache && rm -rf ./ycache
 
 COPY . .
 
-RUN yarn build
-
-# Prune dev dependencies
-RUN rm -rf node_modules && yarn install --production
-
 EXPOSE 8080
 
-CMD [ "node", "./dist/server.js" ]
+CMD [ "node", "./dist/index.js" ]

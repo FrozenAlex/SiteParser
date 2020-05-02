@@ -11,7 +11,7 @@ import * as TurndownService from "turndown";
 import Comment from "../entity/Comment";
 
 let svc = new TurndownService({
-  codeBlockStyle: "fenced",
+	codeBlockStyle: "fenced",
 });
 
 export const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -23,7 +23,7 @@ export default function StartBot(app: Application) {
 	if (process.env.HOSTNAME) {
 		//Launch in polling mode
 		let path = process.env.SECRET_PATH || randomString(7);
-		let address = "https://" + process.env.HOSTNAME + path;
+		let address = "https://" + process.env.HOSTNAME + "/" + path;
 		bot.telegram.setWebhook(address);
 
 		app.use(async (ctx, next) => {
@@ -43,7 +43,7 @@ export default function StartBot(app: Application) {
 
 // If admin middleware
 async function isAdmin(ctx: ContextMessageUpdate, next) {
-  // One permanent admin
+	// One permanent admin
 	if (ctx.message.from.username === process.env.ADMIN_USERNAME) return await next(ctx);
 	let user = await getRepository(User).findOne({
 		where: {
@@ -60,6 +60,22 @@ async function isAdmin(ctx: ContextMessageUpdate, next) {
  * @param bot Telegram bot
  */
 function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
+	bot.help((ctx) => {
+		ctx.reply(`Бот для мониторинга сайта it-starter.ru
+/help - помощь
+/promote - повысить пользователя
+/demote - сделать не админом
+/start - регистрация (приватная команда)
+/sub <имя темы> - подписать этот чат на тему
+/unsub <имя темы> - отписаться от темы
+/sublist - все подписки этого чата
+/topic - список доступных тем
+/topic add <имя темы> <адрес первой страницы> - добавить тему
+/topic delete <имя темы> - удалить тему
+/refresh - обновить поверхностно
+/frefresh - обновить все страницы
+Бот собирает обновления каждые 15 минут`);
+	});
 	// User signup
 	bot.start(async (ctx) => {
 		if (ctx.chat.type === "private") {
@@ -103,14 +119,6 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 		ctx.reply(`${messageParts[1]} теперь не админ!`);
 	});
 
-	bot.hears(/\/unsubscribe.*/, (ctx) => {
-		let messageParts = ctx.message.text.split(" ");
-		if (messageParts[1]) {
-			let feed = messageParts[1];
-			ctx.reply(messageParts.toString());
-		}
-	});
-
 	// Subscriptions to topics
 	bot.hears(/\/sub\s.*/, isAdmin, async (ctx) => {
 		let messageParts = ctx.message.text.split(" ");
@@ -121,7 +129,7 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 			// Get topic
 			let topic = await getRepository(Topic).findOne({ name: feed });
 
-      if (!topic) return ctx.reply("Не найден топик")
+			if (!topic) return ctx.reply("Не найден топик");
 
 			// Create a subscription
 			let subscription = new Subscription();
@@ -131,35 +139,61 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 			subscription.newComments = true;
 			subscription.chatId = ctx.chat.id;
 
-			let subRepo = getRepository(Subscription).save(subscription);
+			let subRepo = await getRepository(Subscription).findOne({
+				where: {
+					topic: topic,
+					chatId: ctx.chat.id,
+				},
+			});
+			if (subRepo) return ctx.reply("Подписка уже существует");
+			await getRepository(Subscription).save(subscription);
 			ctx.reply(`Подписка на ${topic.name} оформлена`);
 		}
 	});
-	bot.hears(/\/unsub\s.*/, (ctx) => {
+	bot.hears(/\/unsub .*/, isAdmin, async (ctx) => {
 		let messageParts = ctx.message.text.split(" ");
 		if (messageParts[1]) {
 			let feed = messageParts[1];
-			ctx.reply(messageParts.toString());
+			let topic = await getRepository(Topic).findOne({
+				where: {
+					name: feed,
+				},
+			});
+			let subRepo = await getRepository(Subscription).findOne({
+				where: {
+					topic: topic,
+					chatId: ctx.chat.id,
+				},
+			});
+			console.log(subRepo, feed, ctx.chat.id);
+			if (subRepo) {
+				await getRepository(Subscription).delete({
+					topic: topic,
+					chatId: ctx.chat.id,
+				});
+				// ctx.reply("Успешно отписались от " + subRepo.topic.name);
+			}
 		}
-  });
-  
-  bot.hears("/sublist", async (ctx) => {
-    let subs = await getRepository(Subscription).find({
-      where: {
-        chatId: ctx.chat.id
-      }, relations: ['topic']
-    });
-
-    if (subs.length == 0) return ctx.reply("Подписок нет")
-    let subNames = subs.map((item)=>{
-      return item.topic.name;
-    })
-    console.log("Sub names", subNames)
-    
-    ctx.reply(`Этот чат подписан на:\n${subNames.join("\n")}`);
 	});
 
-	bot.hears("/topic", async (ctx) => {
+	bot.hears("/sublist", isAdmin, async (ctx) => {
+		let subs = await getRepository(Subscription).find({
+			where: {
+				chatId: ctx.chat.id,
+			},
+			relations: ["topic"],
+		});
+
+		if (subs.length == 0) return ctx.reply("Подписок нет");
+		let subNames = subs.map((item) => {
+			return item.topic.name;
+		});
+		console.log("Sub names", subNames);
+
+		ctx.reply(`Этот чат подписан на:\n${subNames.join("\n")}`);
+	});
+
+	bot.hears("/topic", isAdmin, async (ctx) => {
 		let topics = await getRepository(Topic).find();
 		if (!topics) {
 			return ctx.reply("Ошибка: проблема с доступом к БД");
@@ -192,15 +226,14 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 
 		try {
 			let newtopic = await AddTopic(name, url);
-			if (newtopic)
-				return ctx.reply(`Тема успешно создана.\n /sub ${newtopic.name}`);
+			if (newtopic) return ctx.reply(`Тема успешно создана.\n /sub ${newtopic.name}`);
 		} catch (err) {
 			ctx.reply(err.message);
 		}
 	});
 
 	// Delete topic
-	bot.hears(/\/topic\s+delete.*/, async (ctx) => {
+	bot.hears(/\/topic\s+delete.*/, isAdmin, async (ctx) => {
 		let messageParts = ctx.message.text.split(" ");
 
 		let name = messageParts[2];
@@ -221,7 +254,7 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 	});
 
 	// Refresh topics
-	bot.hears(/\/refresh/, async (ctx) => {
+	bot.hears(/\/refresh/, isAdmin, async (ctx) => {
 		let messageParts = ctx.message.text.split(" ");
 		let start = Date.now();
 		await refreshAll();
@@ -229,63 +262,27 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 		ctx.reply(`Статьи обновлены за ${end - start}мс.`);
 	});
 
-	// Debug function
-	bot.hears("/me", async (ctx) => {
-		// if (ctx.chat.type == "private") {
-			let user = await getRepository(User).findOne({
-				where: {
-					id: ctx.message.from.id,
-				},
-			});
-			if (user) {
-				await ctx.reply(JSON.stringify(user));
-			} else ctx.reply("Не знаем еще тебя /start");
-			ctx.reply(JSON.stringify(ctx.chat));
-		// }
+	// Refresh topics
+	bot.hears(/\/frefresh/, isAdmin, async (ctx) => {
+		let messageParts = ctx.message.text.split(" ");
+		let start = Date.now();
+		await refreshAll(true);
+		let end = Date.now();
+		ctx.reply(`Статьи обновлены за ${end - start}мс.`);
 	});
 
-	bot.hears(/\/test/, async (ctx) => {
-		let post = await getRepository(Post).findOne({
+	// Debug function
+	bot.hears("/me", isAdmin, async (ctx) => {
+		// if (ctx.chat.type == "private") {
+		let user = await getRepository(User).findOne({
 			where: {
-				title: "Java: Переменное число параметров, массивы, оператор for-each",
+				id: ctx.message.from.id,
 			},
 		});
-		if (!post) {
-			return ctx.reply("Ошибка: проблема с доступом к БД");
-		}
-
-		post.excerpt = post.excerpt.replace("pre", "code");
-		let svc = new TurndownService({
-			codeBlockStyle: "fenced",
-		});
-		ctx.reply(
-      `**Новая статья**
-[${post.title}](${process.env.HOSTNAME || "http://localhost:3001"}/a/${post.url})
-\n${svc.turndown(post.excerpt)}\n`,
-			{
-				parse_mode: "Markdown",
-			}
-		);
+		if (user) {
+			await ctx.reply(JSON.stringify(user));
+		} else ctx.reply("Не знаем еще тебя /start");
+		ctx.reply(JSON.stringify(ctx.chat));
+		// }
 	});
-}
-
-export function notifyNewArticle(post: Post) {
-  return (
-    `**Новая статья**
-[${post.title}](${process.env.HOSTNAME || "http://localhost:3001"}/a/${post.url})
-\n${svc.turndown(post.excerpt)}\n`)
-}
-
-export function notifyNewComment(comment: Comment) {
-  return (
-    `**Новый комментарий**
-[${comment.title}](${process.env.HOSTNAME || "http://localhost:3001"}/a/${comment.post.url})
-\n${svc.turndown(comment.content)}\n`)
-}
-
-export function notifyNewHeader(comment: Comment) {
-  return (
-    `**Новый комментарий**
-[${comment.title}](${process.env.HOSTNAME || "http://localhost:3001"}/a/${comment.post.url}#${comment.id})
-\n${svc.turndown(comment.content)}\n`)
 }

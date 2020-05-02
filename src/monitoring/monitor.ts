@@ -16,19 +16,19 @@ import { bot } from "../bot/telegram";
 import { comparePosts, ComparisonResult } from "../comparator";
 import Subscription from "../entity/Subscription";
 
-// var CronJob = require("cron").CronJob;
+var CronJob = require("cron").CronJob;
 
-// var job = new CronJob(
-// 	"* * * * * 0",
-// 	function () {
-// 		refreshAll();
-// 		console.log("refreshed articles");
-// 	},
-// 	null,
-// 	true,
-// 	"America/Los_Angeles"
-// );
-// job.start();
+var job = new CronJob(
+	"1 */15 * * * *",
+	function () {
+		refreshAll();
+		console.log("refreshed articles");
+	},
+	null,
+	true,
+	"America/Los_Angeles"
+);
+job.start();
 
 /**
  * Add a topic for monitoring
@@ -66,14 +66,14 @@ export async function AddTopic(name: string, url: string) {
 /**
  * Refresh all topics
  */
-export async function refreshAll() {
+export async function refreshAll(force = false) {
 	let topics = await getRepository(Topic).find({
 		relations: ["posts", "subscriptions", "posts.comments"],
 	});
 	if (!topics) throw new Error("Что-то не то с бд");
 	let result = await Promise.all(
 		topics.map(async (element) => {
-			await updateTopic(element, true);
+			await updateTopic(element, force);
 		})
 	);
 
@@ -127,12 +127,14 @@ export async function updateTopic(topic: Topic, force: boolean = false) {
 	let updates;
 	if (!force) {
 		updates = postList.filter((post) => {
-			let existingPost = existingPosts.find((item) => post.originalUrl == item.originalUrl);
+			let existingPost = existingPosts.find(
+				(item) => post.originalUrl == item.originalUrl
+			);
 			if (existingPost) {
-				let updatedDate = post.lastUpdate?.getTime() != existingPost.lastUpdate?.getTime();
+				let updatedDate =
+					post.lastUpdate?.getTime() != existingPost.lastUpdate?.getTime();
 				let updatedCommentCount = post.commentCount !== existingPost.commentCount;
 				if (updatedDate || updatedCommentCount) {
-					console.log(post.title + Date.now(), updatedDate, updatedCommentCount);
 					// Add id to the new post
 					post.id = existingPost.id;
 					return true;
@@ -143,29 +145,34 @@ export async function updateTopic(topic: Topic, force: boolean = false) {
 	} else {
 		updates = postList;
 	}
-	
 
 	// Get pages (enrich those update)
 	updates = (await getPosts(updates)) as Post[]; // Ignore no ids.
 	// Filter posts again if force is on
 	if (force) {
-		updates = updates.filter((post:Post) => {
-			let existingPost = existingPosts.find((item) => post.originalUrl == item.originalUrl);
+		updates = updates.filter((post: Post) => {
+			let existingPost = existingPosts.find(
+				(item) => post.originalUrl == item.originalUrl
+			);
 			if (existingPost) {
 				let result = comparePosts(existingPost, post);
-				return (result.changedDate || result.newComments.length > 0 || result.updatedComments.length > 0);
+				return (
+					result.changedDate ||
+					result.newComments.length > 0 ||
+					result.updatedComments.length > 0
+				);
 			}
 		});
 	}
-	
+
 	// getChanges
-	let changes = updates.map((post:Post) => {
+	let changes = updates.map((post: Post) => {
 		let existingPost = existingPosts.find((item) => post.originalUrl == item.originalUrl);
 		if (existingPost) {
 			post.id = existingPost.id; // Fix id for the post
+			post.url = existingPost.url;
 			return comparePosts(existingPost, post);
 		}
-		
 	});
 
 	// Get new posts from the website
@@ -174,11 +181,11 @@ export async function updateTopic(topic: Topic, force: boolean = false) {
 	// Save updates
 	await Promise.all(
 		changes.map(async (change: ComparisonResult) => {
+			change.post.commentCount = change.post.comments ? change.post.comments.length : 0;
 			await getRepository(Post).save(change.post);
 			return change.post.comments.map(async (comment) => {
-				console.log(comment.post.title)
-			  return getRepository(Comment).save(comment);
-			})
+				return getRepository(Comment).save(comment);
+			});
 		})
 	);
 
@@ -187,14 +194,11 @@ export async function updateTopic(topic: Topic, force: boolean = false) {
 		newPosts.map(async (post) => {
 			post.topic = topic;
 			let item = await getRepository(Post).save(post);
-			
-			console.log(post.topic.name," - ",item.topic.name);// await Promise.all(
-			post.comments.map(async (comment) => {
-				return getRepository(Comment).save(comment);
-			})
-			// );
-			// return item;
-			console.log(post.topic.displayName)
+			await Promise.all(
+				post.comments.map(async (comment) => {
+					return getRepository(Comment).save(comment);
+				})
+			);
 			return item;
 		})
 	);
@@ -205,9 +209,12 @@ export async function updateTopic(topic: Topic, force: boolean = false) {
 		newHeader = firstPageList.header;
 		topic.announcement = newHeader;
 		// save the header change
-		await getRepository(Topic).update({id: topic.id}, {
-			announcement: newHeader
-		});
+		await getRepository(Topic).update(
+			{ id: topic.id },
+			{
+				announcement: newHeader,
+			}
+		);
 	}
 
 	await notifyUsers(changes, results, newHeader, topic);
@@ -286,38 +293,37 @@ export async function notifyUsers(
 
 			// if new comment
 			if (change.newContent) {
-				header += `Новый контент:\n` + removeHTML(change.newContent) + "\n"
+				header += `Новый контент:\n` + removeHTML(change.newContent) + "\n";
 			}
-			
+
 			// if new comment
 			if (change.newComments && change.newComments.length > 0) {
-				let commments = change.newComments.map(comment=>{
-					return `${comment.title}: ${comment.author}`
-				})
-				header += `Новые комментарии:\n` + commments.join("\n") + "\n"
+				let commments = change.newComments.map((comment) => {
+					return `${comment.title}: ${comment.author}`;
+				});
+				header += `Новые комментарии:\n` + commments.join("\n") + "\n";
 			}
 			// if changed comment
 			if (change.updatedComments && change.updatedComments.length > 0) {
-				let commments = change.updatedComments.map(comment=>{
-					return `${comment.title}: ${comment.author}`
-				})
-				header += `Измененные комментарии:\n` + commments.join("\n") + "\n"
+				let commments = change.updatedComments.map((comment) => {
+					return `${comment.title}: ${comment.author}`;
+				});
+				header += `Измененные комментарии:\n` + commments.join("\n") + "\n";
 			}
-			updatesMessage+=header;
+			updatesMessage += header;
 		});
 
 		// Add to the main message
 		commonMessage += updatesMessage;
 	}
 
-	console.log(commonMessage)
-	// if (commonMessage) {
-	// 	subs.forEach(
-	// 		sub => {
-	// 			bot.telegram.sendMessage(sub.chatId, commonMessage);
-	// 		}
-	// 	)
-	// }
+	if (commonMessage) {
+		subs.forEach((sub) => {
+			bot.telegram.sendMessage(sub.chatId, commonMessage, {
+				parse_mode: "Markdown",
+			});
+		});
+	}
 }
 
 export function getArticleUrl(id: string) {

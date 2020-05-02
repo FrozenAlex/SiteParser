@@ -19,7 +19,7 @@ export default class Comment {
 	lastUpdate: Date;
 
     // TODO: Figure out the max size
-	@Column({ length: 60000, nullable: false })
+	@Column({type: "longtext"})
 	content: string;
 
 	@ManyToOne((type) => Post, (post) => post.comments, {onDelete: "CASCADE"})

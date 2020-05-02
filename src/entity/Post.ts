@@ -18,7 +18,7 @@ export default class Post {
 	title: string;
 
 	// Original article url
-	@Column({length:500})
+	@Column({length:1000})
 	originalUrl: string;
 
 	// The author of the article
@@ -26,7 +26,7 @@ export default class Post {
     author?: string; 
 
 	// Short description of an article
-	@Column()
+	@Column({type: "text" })
 	excerpt: string; 
 	
 	// Count of comments for updates
@@ -39,7 +39,7 @@ export default class Post {
 
 	// TODO: Figure out the max size
 	// Content of the article
-	@Column({ length: 12000, nullable: false })
+	@Column({ nullable: false, type: "longtext" })
 	content: string;
 
     // Topic of the article

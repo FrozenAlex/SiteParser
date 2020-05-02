@@ -1,1 +1,45 @@
-version: 3.6
+version: '3.6'
+services:
+  db:
+    image: mariadb
+    container_name: db
+    restart: always
+    #user: "1001:1001"
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=Europe/Moscow
+      - MYSQL_ROOT_PASSWORD=itstarter
+      - MYSQL_DATABASE=itstarter
+    networks:
+      - db
+    ports:
+      - 3306
+  parser:
+    image: node:14-alpine
+    restart: always
+    environment:
+      - PORT=8080
+      - HOSTNAME=
+    depends_on:
+      - db
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - 8080:8080
+    networks:
+      - db
+    command: "yarn start"
+  adminer:
+    image: adminer
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - 3004:8080
+    networks:
+      - db
+
+networks:
+  db:

@@ -79,7 +79,6 @@ router.get("/a/:url/", async (ctx, next) => {
 		relations: ['topic','comments']
 	});
 	
-	console.log(post.comments)
 	await ctx.render("post", post);
 });
 
@@ -177,7 +176,7 @@ async function main() {
 	// @ts-ignore
 	await createConnection({
 		entities: [Cookie, Topic, Post, Comment, Subscription, User],
-		// logging: process.env.NODE_ENV !== "production",
+		logging: process.env.NODE_ENV !== "production",
 		synchronize: true,
 		type: process.env.DB_TYPE || "sqlite",
 		database: process.env.DB_NAME || __dirname + `/../data/db.sqlite`,
