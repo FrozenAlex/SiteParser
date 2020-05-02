@@ -6,8 +6,8 @@ html(lang="en")
         title #{topic.name ||  "Article"}
         link(rel="stylesheet" href="/app.css")
     body
-        if header
-            | !{header}
+        if topic.announcement
+            | !{topic.announcement}
 
         if topic.name
             h1.centered-text #{topic.name}
