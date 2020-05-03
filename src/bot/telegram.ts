@@ -6,13 +6,14 @@ import Topic from "../entity/Topic";
 import { AddTopic, refreshAll } from "../monitoring/monitor";
 import User from "../entity/User";
 import Subscription from "../entity/Subscription";
-import Post from "../entity/Post";
 import * as TurndownService from "turndown";
-import Comment from "../entity/Comment";
+import { ChatMember } from "telegraf/typings/telegram-types";
 
 let svc = new TurndownService({
 	codeBlockStyle: "fenced",
 });
+
+let GroupAdmins = {};
 
 export const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -20,7 +21,12 @@ export default function StartBot(app: Application) {
 	setBotActions(bot);
 
 	// Launch bot
-	if (process.env.HOSTNAME) {
+	if (
+		process.env.HOSTNAME &&
+		process.env.HOSTNAME != "" &&
+		process.env.HOSTNAME != "localhost" &&
+		process.env.HOSTNAME != "127.0.0.1"
+	) {
 		//Launch in polling mode
 		let path = process.env.SECRET_PATH || randomString(7);
 		let address = "https://" + process.env.HOSTNAME + "/" + path;
@@ -52,7 +58,34 @@ async function isAdmin(ctx: ContextMessageUpdate, next) {
 		},
 	});
 	if (user) return await next(ctx);
-	ctx.reply("Нет прав у тебя");
+	// ctx.reply("Только админ может это делать");
+}
+
+async function isChatAdmin(ctx: ContextMessageUpdate, next: any) {
+	// If private then you are the chat admin
+	if (ctx.message.chat.type == "private") {
+		return await next(ctx);
+	}
+	// If it's a group and all members are admins
+	if (ctx.chat.type == "group" || ctx.chat.type == "supergroup") {
+		if (ctx.chat.all_members_are_administrators) {
+			return await next(ctx);
+		} else {
+			// TODO: Move it to the database
+			// Get admins and cache them untill restart
+			if (!GroupAdmins[ctx.chat.id]) {
+				GroupAdmins[ctx.chat.id] = await ctx.telegram.getChatAdministrators(ctx.chat.id);
+			}
+			let isAdmin = GroupAdmins[ctx.chat.id].find(
+				(item: ChatMember) => item.user.id == ctx.message.from.id
+			);
+			if (isAdmin) {
+				return await next(ctx);
+			} else {
+				console.log(`User does not have admin rights ${ctx.from.username}`);
+			}
+		}
+	}
 }
 
 /**
@@ -80,14 +113,21 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 	bot.start(async (ctx) => {
 		if (ctx.chat.type === "private") {
 			// Record our new user or update
-			let user = new User();
-			user.id = ctx.chat.id;
-			user.username = ctx.chat.username;
-			await getRepository(User).save(user);
-			ctx.reply(
-				"Отлично, осталось запросить у админа разрешения :) \nВаш ID: " +
-					ctx.message.from.id
-			);
+			let existing = await getRepository(User).findOne({
+				where: { id: ctx.message.from.id },
+			});
+			if (!existing) {
+				let user = new User();
+				user.id = ctx.message.from.id;
+				user.username = ctx.message.from.username;
+				await getRepository(User).save(user);
+				ctx.reply(
+					"Отлично, осталось запросить у админа разрешения :) \nВаш ID: " +
+						ctx.message.from.id
+				);
+			} else {
+				ctx.reply("Пользователь уже существует");
+			}
 		}
 	});
 
@@ -101,7 +141,6 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 		if (!user) return ctx.reply("Не нашли пользователя");
 		user.role = "admin";
 		await getRepository(User).save(user);
-
 		ctx.reply(`${messageParts[1]} теперь админ!`);
 	});
 
@@ -120,7 +159,7 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 	});
 
 	// Subscriptions to topics
-	bot.hears(/\/sub\s.*/, isAdmin, async (ctx) => {
+	bot.hears(/\/sub\s.*/, isChatAdmin, async (ctx) => {
 		let messageParts = ctx.message.text.split(" ");
 		if (messageParts[1]) {
 			// get feed name
@@ -150,7 +189,7 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 			ctx.reply(`Подписка на ${topic.name} оформлена`);
 		}
 	});
-	bot.hears(/\/unsub .*/, isAdmin, async (ctx) => {
+	bot.hears(/\/unsub .*/, isChatAdmin, async (ctx) => {
 		let messageParts = ctx.message.text.split(" ");
 		if (messageParts[1]) {
 			let feed = messageParts[1];
@@ -176,7 +215,7 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 		}
 	});
 
-	bot.hears(/\/sublist/, isAdmin, async (ctx) => {
+	bot.hears(/\/sublist/, isChatAdmin, async (ctx) => {
 		let subs = await getRepository(Subscription).find({
 			where: {
 				chatId: ctx.chat.id,
@@ -191,20 +230,6 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 		console.log("Sub names", subNames);
 
 		ctx.reply(`Этот чат подписан на:\n${subNames.join("\n")}`);
-	});
-
-	bot.hears(/\/topic/, isAdmin, async (ctx) => {
-		let topics = await getRepository(Topic).find();
-		if (!topics) {
-			return ctx.reply("Ошибка: проблема с доступом к БД");
-		}
-		console.log(topics);
-		if (topics.length === 0) {
-			return ctx.reply("Еще нет тем");
-		}
-		let list = topics.map((topic) => `${topic.name}:${topic.url}`);
-
-		ctx.reply(`Всего топиков ${topics.length}\n${list.join("\n")}`);
 	});
 
 	// Add topic
@@ -253,8 +278,22 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 		}
 	});
 
+	bot.hears(/\/topics/, isChatAdmin, async (ctx) => {
+		let topics = await getRepository(Topic).find();
+		if (!topics) {
+			return ctx.reply("Ошибка: проблема с доступом к БД");
+		}
+		console.log(topics);
+		if (topics.length === 0) {
+			return ctx.reply("Еще нет тем");
+		}
+		let list = topics.map((topic) => `${topic.name}:${topic.url}`);
+
+		ctx.reply(`Всего топиков ${topics.length}\n${list.join("\n")}`);
+	});
+
 	// Refresh topics
-	bot.hears(/\/refresh/, isAdmin, async (ctx) => {
+	bot.hears(/\/refresh/, isChatAdmin, async (ctx) => {
 		let messageParts = ctx.message.text.split(" ");
 		let start = Date.now();
 		await refreshAll();
@@ -272,17 +311,17 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 	});
 
 	// Debug function
-	bot.hears(/\/me/, isAdmin, async (ctx) => {
-		// if (ctx.chat.type == "private") {
-		let user = await getRepository(User).findOne({
-			where: {
-				id: ctx.message.from.id,
-			},
-		});
-		if (user) {
-			await ctx.reply(JSON.stringify(user));
-		} else ctx.reply("Не знаем еще тебя /start");
-		ctx.reply(JSON.stringify(ctx.chat));
-		// }
+	bot.hears(/\/me/, isChatAdmin, async (ctx) => {
+		if (ctx.chat.type == "private") {
+			let user = await getRepository(User).findOne({
+				where: {
+					id: ctx.message.from.id,
+				},
+			});
+			if (user) {
+				await ctx.reply(JSON.stringify(user));
+			} else ctx.reply("Не знаем еще тебя /start");
+			ctx.reply(JSON.stringify(ctx.chat));
+		}
 	});
 }
