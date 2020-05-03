@@ -281,7 +281,7 @@ export async function notifyUsers(
 			return `[${post.title}](${getArticleUrl(post.url)})`;
 		});
 		newArticlesText += texts.join("\n");
-		commonMessage += newArticlesText;
+		commonMessage += newArticlesText + "\n";
 	}
 
 	// Get changes
