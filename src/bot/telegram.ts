@@ -176,7 +176,7 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 		}
 	});
 
-	bot.hears("/sublist", isAdmin, async (ctx) => {
+	bot.hears(/\/sublist/, isAdmin, async (ctx) => {
 		let subs = await getRepository(Subscription).find({
 			where: {
 				chatId: ctx.chat.id,
@@ -193,7 +193,7 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 		ctx.reply(`Этот чат подписан на:\n${subNames.join("\n")}`);
 	});
 
-	bot.hears("/topic", isAdmin, async (ctx) => {
+	bot.hears(/\/topic/, isAdmin, async (ctx) => {
 		let topics = await getRepository(Topic).find();
 		if (!topics) {
 			return ctx.reply("Ошибка: проблема с доступом к БД");
@@ -272,7 +272,7 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 	});
 
 	// Debug function
-	bot.hears("/me", isAdmin, async (ctx) => {
+	bot.hears(/\/me/, isAdmin, async (ctx) => {
 		// if (ctx.chat.type == "private") {
 		let user = await getRepository(User).findOne({
 			where: {
