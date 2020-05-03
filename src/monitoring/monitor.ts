@@ -271,14 +271,14 @@ export async function notifyUsers(
 
 	// New header
 	if (newHeader) {
-		commonMessage += "Новый заголовок:\n" + cleanUpText(newHeader) + "\n";
+		commonMessage += "*Новый заголовок*:\n" + cleanUpText(newHeader) + "\n";
 	}
 
 	if (newPosts && newPosts.length != 0) {
-		let newArticlesText = "Новые статьи:\n";
+		let newArticlesText = "*Новые статьи*:\n";
 		// Notify about new posts
 		let texts = newPosts.map((post) => {
-			return `${post.title}\n ${getArticleUrl(post.url)}`;
+			return `[${post.title}](${getArticleUrl(post.url)})`;
 		});
 		newArticlesText += texts.join("\n");
 		commonMessage += newArticlesText;
@@ -286,10 +286,10 @@ export async function notifyUsers(
 
 	// Get changes
 	if (changes && changes.length != 0) {
-		let updatesMessage = "Изменения: \n";
+		let updatesMessage = "*Изменения*: \n";
 		// Message about changes
 		changes.forEach((change) => {
-			let header = `${change.post.title}: ${getArticleUrl(change.post.url)}\n`;
+			let header = `[${change.post.title}](${getArticleUrl(change.post.url)}): \n`;
 
 			// if new comment
 			if (change.newContent) {
