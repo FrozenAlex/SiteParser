@@ -19,7 +19,7 @@
     "mysql2": "^2.1.0",
     "node-html-parser": "^1.2.16",
     "qs": "^6.9.4",
-    "telegraf": "^3.37.0",
+    "telegraf": "^3.38.0",
     "turndown": "^6.0.0",
     "typeorm": "^0.2.24"
   },
