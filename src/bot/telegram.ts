@@ -246,7 +246,7 @@ CC - ${(subscription.changedComments) ? "1" : "0"}
 		if (subs.length == 0) return ctx.reply("Подписок нет");
 		let subNames = subs.map((item) => {
 			return item.topic.name +
-				+ ((item.newPosts) ? "1" : "0")
+				+ " " + ((item.newPosts) ? "1" : "0")
 				+ " " + ((item.newHeader) ? "1" : "0")
 				+ " " + ((item.newComments) ? "1" : "0")
 				+ " " + item.headerMatch
