@@ -107,6 +107,9 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 /topic delete <имя темы> - удалить тему
 /refresh - обновить поверхностно
 /frefresh - обновить все страницы
+/subchannel <channelname> <topic>
+/unsubchannel <channelname> <topic>
+/channelsubs <channelname>
 Бот собирает обновления каждые 15 минут`);
 	});
 	// User signup
@@ -123,7 +126,7 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 				await getRepository(User).save(user);
 				ctx.reply(
 					"Отлично, осталось запросить у админа разрешения :) \nВаш ID: " +
-						ctx.message.from.id
+					ctx.message.from.id
 				);
 			} else {
 				ctx.reply("Пользователь уже существует");
@@ -210,7 +213,9 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 					topic: topic,
 					chatId: ctx.chat.id,
 				});
-				// ctx.reply("Успешно отписались от " + subRepo.topic.name);
+				ctx.reply("Успешно отписались от " + subRepo.topic.name);
+			} else {
+				ctx.reply("Этой подписки уже нет")
 			}
 		}
 	});
@@ -322,6 +327,190 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 				await ctx.reply(JSON.stringify(user));
 			} else ctx.reply("Не знаем еще тебя /start");
 			ctx.reply(JSON.stringify(ctx.chat));
+		}
+	});
+
+	/**
+	 * Subscribe public channel to a topic
+	 * /subchannel <channelname> <topic> <announcement> <articles> <comments>
+	 * /subchannel ChanChan 2ПМ 1 1 1
+	 */
+	bot.hears(/\/subchannel .*/, isAdmin, async (ctx) => {
+		if (ctx.chat.type == "private") {
+			let messageParts = ctx.message.text.split(" ");
+			if (messageParts[1] && messageParts[2]) {
+				try {
+					let topicName = messageParts[2];
+
+					// Get topic
+					let topic = await getRepository(Topic).findOne({ name: topicName });
+					if (!topic) return ctx.reply("Не найден топик");
+
+					// Get chat
+					let chat = await ctx.telegram.getChat(messageParts[1])
+					if (!chat) return ctx.reply("Чат не найден");
+
+					// Channel sanity check
+					if (chat.type !== "channel") ctx.reply("Чат не является публичным каналом");
+					let channelAdmins = await ctx.telegram.getChatAdministrators(chat.id);
+					if (!channelAdmins) return ctx.reply("У канала нет админов??")
+
+					// Check if the user is admin
+					let isAdmin = channelAdmins.find(
+						(item: ChatMember) => item.user.id == ctx.message.from.id
+					);
+					if (!isAdmin) return ctx.reply("Вы не являетесь админом этого канала");
+
+
+					// Everything is checked, now add the subscription
+					// /subchannel <channelname> <topic> <announcement> <articles> <comments>
+					let subscription = new Subscription();
+					subscription.topic = topic;
+					if (messageParts[3] && messageParts[4] && messageParts[5]) {
+						subscription.newAnnouncements = messageParts[3] == "1";
+						subscription.newAdminArticles = messageParts[4] == "1";
+						subscription.newComments = messageParts[5] == "1";
+					} else {
+						subscription.newAnnouncements = true;
+						subscription.newAdminArticles = true;
+						subscription.newComments = true;
+					}
+					subscription.chatId = chat.id;
+
+					let subRepo = await getRepository(Subscription).findOne({
+						where: {
+							topic: topic,
+							chatId: chat.id,
+						},
+					});
+
+					if (subRepo) return ctx.reply("Подписка уже существует");
+					await getRepository(Subscription).save(subscription);
+					ctx.reply(`Подписка на ${topic.name} оформлена\nId вашего канала:${chat.id}
+Опции подписки:
+Новые статьи - ${(subscription.newAdminArticles) ? "Да" : "Нет"}
+Новые анонсы - ${(subscription.newAnnouncements) ? "Да" : "Нет"}
+Новые комментарии - ${(subscription.newComments) ? "Да" : "Нет"}`);
+				} catch (err) {
+					ctx.reply("Что-то пошло не так, проверьте данные");
+					console.log(err);
+				}
+
+
+			} else {
+				ctx.reply("Неправильный формат");
+			}
+		}
+	});
+
+	/**
+	 * Subscribe public channel to a topic
+	 * /unsubchannel <channelname> <topic>
+	 * /unsubchannel ChanChan 2ПМ
+	 */
+	bot.hears(/\/unsubchannel.*/, isAdmin, async (ctx) => {
+		if (ctx.chat.type == "private") {
+			let messageParts = ctx.message.text.split(" ");
+			if (messageParts[1] && messageParts[2]) {
+				try {
+					let topicName = messageParts[2];
+
+					// Get topic
+					let topic = await getRepository(Topic).findOne({ name: topicName });
+					if (!topic) return ctx.reply("Не найден топик");
+
+					// Get chat
+					let chat = await ctx.telegram.getChat(messageParts[1])
+					if (!chat) return ctx.reply("Чат не найден");
+
+					// Channel sanity check
+					if (chat.type !== "channel") ctx.reply("Чат не является публичным каналом");
+					let channelAdmins = await ctx.telegram.getChatAdministrators(chat.id);
+					if (!channelAdmins) return ctx.reply("У канала нет админов??")
+
+					// Check if the user is admin
+					let isAdmin = channelAdmins.find(
+						(item: ChatMember) => item.user.id == ctx.message.from.id
+					);
+					if (!isAdmin) return ctx.reply("Вы не являетесь админом этого канала");
+
+
+					// Everything is checked, now remove the subscription
+					let subRepo = await getRepository(Subscription).findOne({
+						where: {
+							topic: topic,
+							chatId: chat.id,
+						},
+					});
+
+					if (!subRepo) return ctx.reply("Канал не подписан на этот топик");
+
+					await getRepository(Subscription).delete({
+						topic: topic,
+						chatId: chat.id
+					});
+
+					ctx.reply("Подписка успешно отменена.")
+				} catch (err) {
+					ctx.reply("Что-то пошло не так, проверьте данные");
+					console.log(err);
+				}
+			} else {
+				ctx.reply("Неправильный формат");
+			}
+		}
+	});
+
+	/**
+	 * List of channel subscriptions
+	 * 
+	 */
+	bot.hears(/\/channelsubs.*/, isChatAdmin, async (ctx) => {
+		if (ctx.chat.type == "private") {
+			let messageParts = ctx.message.text.split(" ");
+			if (messageParts[1]) {
+				try {
+					// Get chat
+					let chat = await ctx.telegram.getChat(messageParts[1])
+					if (!chat) return ctx.reply("Чат не найден");
+
+					// Channel sanity check
+					if (chat.type !== "channel") ctx.reply("Чат не является публичным каналом");
+					let channelAdmins = await ctx.telegram.getChatAdministrators(chat.id);
+					if (!channelAdmins) return ctx.reply("У канала нет админов??")
+
+					// Check if the user is admin
+					let isAdmin = channelAdmins.find(
+						(item: ChatMember) => item.user.id == ctx.message.from.id
+					);
+					if (!isAdmin) return ctx.reply("Вы не являетесь админом этого канала");
+
+
+					// Everything is checked, now list subs
+					let subs = await getRepository(Subscription).find({
+						where: {
+							chatId: chat.id,
+						},
+						relations: ["topic"],
+					});
+
+					if (subs.length == 0) return ctx.reply("Подписок нет");
+					let subNames = subs.map((item) => {
+						return item.topic.name;
+					});
+					console.log("Sub names", subNames);
+
+					ctx.reply(`Этот канал подписан на:\n${subNames.join("\n")}`);
+
+
+					ctx.reply("Подписка успешно отменена.")
+				} catch (err) {
+					ctx.reply("Что-то пошло не так, проверьте данные");
+					console.log(err);
+				}
+			} else {
+				ctx.reply("Неправильный формат");
+			}
 		}
 	});
 }
