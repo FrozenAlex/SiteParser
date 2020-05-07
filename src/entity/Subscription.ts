@@ -3,12 +3,8 @@ import {
 	Column,
 	ManyToOne,
 	PrimaryGeneratedColumn,
-	OneToOne,
-	JoinColumn,
-	PrimaryColumn,
 } from "typeorm";
 import Topic from "./Topic";
-import User from "./User";
 
 /**
  * Subscription class
@@ -24,23 +20,47 @@ export default class Subscription {
 	})
 	newComments: boolean;
 
+	// Notify about changed comments
+	@Column({
+		default: true,
+	})
+	changedComments: boolean;
+
+	// Notify about changed comments
+	@Column({
+		default: true,
+	})
+	changedPosts: boolean;
+
+	// Notify about changed comments
+	@Column({
+		default: false,
+	})
+	silent: boolean;
+
 	// Notify about new announcements
 	@Column({
 		default: true,
 	})
-	newAnnouncements: boolean;
+	newHeader: boolean;
 
 	// Notify about new articles
 	@Column({
 		default: true,
 	})
-	newArticles: boolean;
+	newPosts: boolean;
 
-	// Admin articles
+	// Match commenter
 	@Column({
-		default: true,
+		default: "",
 	})
-	newAdminArticles: boolean;
+	commentMatch: string
+	
+	// Look for a word in header
+	@Column({
+		default: "",
+	})
+	headerMatch: string;
 
 	// Subscription topic
 	@ManyToOne((type) => Topic, (topic) => topic.subscriptions, { onDelete: "CASCADE" })

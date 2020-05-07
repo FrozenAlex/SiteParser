@@ -251,7 +251,7 @@ export async function getPosts(articleHeaders: Partial<Post>[]) {
 }
 
 /**
- * Notify users about new changes
+ * Notify users about new changes based on preferences
  * @param changes
  * @param newPosts
  */
@@ -261,7 +261,7 @@ export async function notifyUsers(
 	newHeader = "",
 	topic: Topic
 ) {
-	let commonMessage = "";
+
 	// Get all subbed on a current topic
 	let subs = await getRepository(Subscription).find({
 		where: {
@@ -269,61 +269,78 @@ export async function notifyUsers(
 		},
 	});
 
-	// New header
-	if (newHeader) {
-		commonMessage += "*Новый заголовок*:\n" + cleanUpText(newHeader) + "\n";
-	}
+	// We will create different messages for each of the subs
+	subs.forEach((sub) => {
+		let individualMessage = "";
 
-	if (newPosts && newPosts.length != 0) {
-		let newArticlesText = "*Новые статьи*:\n";
-		// Notify about new posts
-		let texts = newPosts.map((post) => {
-			return `[${post.title}](${getArticleUrl(post.url)})`;
-		});
-		newArticlesText += texts.join("\n");
-		commonMessage += newArticlesText + "\n";
-	}
+		// New header 
+		if (
+			newHeader &&
+			(sub.newHeader ||
+				((sub.headerMatch != "") ? (newHeader.indexOf(sub.headerMatch) > -1) : false))
+		) {
+			individualMessage += "*Новый заголовок*:\n" + cleanUpText(newHeader) + "\n";
+		}
 
-	// Get changes
-	if (changes && changes.length != 0) {
-		let updatesMessage = "*Изменения*: \n";
-		// Message about changes
-		changes.forEach((change) => {
-			let header = `[${change.post.title}](${getArticleUrl(change.post.url)}): \n`;
-
-			// if new comment
-			if (change.newContent) {
-				header += `Новый контент:\n` + removeHTML(change.newContent) + "\n";
-			}
-
-			// if new comment
-			if (change.newComments && change.newComments.length > 0) {
-				let commments = change.newComments.map((comment) => {
-					return `${comment.title}: ${comment.author}`;
-				});
-				header += `Новые комментарии:\n` + commments.join("\n") + "\n";
-			}
-			// if changed comment
-			if (change.updatedComments && change.updatedComments.length > 0) {
-				let commments = change.updatedComments.map((comment) => {
-					return `${comment.title}: ${comment.author}`;
-				});
-				header += `Измененные комментарии:\n` + commments.join("\n") + "\n";
-			}
-			updatesMessage += header;
-		});
-
-		// Add to the main message
-		commonMessage += updatesMessage;
-	}
-
-	if (commonMessage) {
-		subs.forEach((sub) => {
-			bot.telegram.sendMessage(sub.chatId, commonMessage, {
-				parse_mode: "Markdown",
+		// New articles
+		if (newPosts && newPosts.length != 0 && (sub.newPosts)) {
+			let newArticlesText = "*Новые статьи*:\n";
+			// Notify about new posts
+			let texts = newPosts.map((post) => {
+				return `[${post.title}](${getArticleUrl(post.url)})`;
 			});
-		});
-	}
+			newArticlesText += texts.join("\n");
+			individualMessage += newArticlesText + "\n";
+		}
+
+		// Get changes
+		if (changes && changes.length != 0) {
+			let updatesContent = "";
+			// Message about changes
+			changes.forEach((change) => {
+				let content = ""
+
+				// if new comment
+				if (change.newContent && sub.changedPosts) {
+					content += `Новый контент:\n` + removeHTML(change.newContent) + "\n";
+				}
+
+				// if new comment
+				if (change.newComments && change.newComments.length > 0 && (sub.newComments)) {
+					let commments = change.newComments.map((comment) => {
+						return `${comment.title}: ${comment.author}`;
+					});
+					content += `Новые комментарии:\n` + commments.join("\n") + "\n";
+				}
+
+				// if changed comment
+				if (change.updatedComments && change.updatedComments.length > 0 && sub.changedComments) {
+					let commments = change.updatedComments.map((comment) => {
+						return `${comment.title}: ${comment.author}`;
+					});
+					content += `Измененные комментарии:\n` + commments.join("\n") + "\n";
+				}
+
+				// Add to the main message only if something matched criteria
+				if (content != "") {
+					updatesContent += `[${change.post.title}](${getArticleUrl(change.post.url)}): \n` + content;
+				}
+			});
+
+			// Add to the main message if everything works
+			if (updatesContent != "") {
+				let updatesMessage = "*Изменения*: \n" + updatesContent;
+				individualMessage += updatesMessage;
+			}
+		}
+
+		if (individualMessage != "") {
+			bot.telegram.sendMessage(sub.chatId, individualMessage, {
+				parse_mode: "Markdown",
+				disable_notification: sub.silent
+			});
+		}
+	})
 }
 
 export function getArticleUrl(id: string) {
