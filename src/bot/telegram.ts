@@ -465,7 +465,7 @@ function setBotActions(bot: Telegraf<ContextMessageUpdate>) {
 	 * List of channel subscriptions
 	 * 
 	 */
-	bot.hears(/\/channelsubs.*/, isChatAdmin, async (ctx) => {
+	bot.hears(/\/channelsubs.*/, isAdmin, async (ctx) => {
 		if (ctx.chat.type == "private") {
 			let messageParts = ctx.message.text.split(" ");
 			if (messageParts[1]) {
