@@ -7,9 +7,8 @@ html(lang="en")
         meta(name="og:type", content="article")
         meta(name="og:title", content=title||"")
         meta(name="og:description", content=cleanUpText(excerpt))
-        meta(name="og:description", content=cleanUpText(excerpt))
-        if date
-            meta(name="article:published_time", content=date)
+        if lastUpdate
+            meta(name="article:published_time", content=lastUpdate)
         if author
             meta(name="author", content=author)
         title #{title ||  "Article"}
@@ -25,7 +24,7 @@ html(lang="en")
                 if author
                     h2.description.centered-text.author #{author}
                 if date
-                    h3.description.centered-text #{moment(date).locale("ru").format('LLL')}
+                    h3.description.centered-text #{moment(lastUpdate).locale("ru").format('LLL')}
                 if originalUrl
                     a.centered-text(href=originalUrl) Оригинальная статья 
             section.content
