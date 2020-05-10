@@ -23,7 +23,7 @@ html(lang="en")
                     h1.centered-text.title #{title}
                 if author
                     h2.description.centered-text.author #{author}
-                if date
+                if lastUpdate
                     h3.description.centered-text #{moment(lastUpdate).locale("ru").format('LLL')}
                 if originalUrl
                     a.centered-text(href=originalUrl) Оригинальная статья 
