@@ -3,28 +3,40 @@ html(lang="en")
     head
         meta(charset="UTF-8")
         meta(name="viewport" content="width=device-width, initial-scale=1.0")
-        meta(name="description", content=excerpt)
+        meta(name="description", content=cleanUpText(excerpt))
+        meta(name="og:type", content="article")
+        meta(name="og:title", content=title||"")
+        meta(name="og:description", content=cleanUpText(excerpt))
+        meta(name="og:description", content=cleanUpText(excerpt))
+        if date
+            meta(name="article:published_time", content=date)
+        if author
+            meta(name="author", content=author)
         title #{title ||  "Article"}
         link(rel="stylesheet" href="/app.css")
     body
-        if header
-            | !{header}
-        if topic
-            a(href="/topic/"+ topic.name).centered-text #{topic.name}
-        if title
-            h1.centered-text #{title}
-        if author
-            h2.description.centered-text #{author}
-        if date
-            h3.description.centered-text #{moment(date).locale("ru").format('LLL')}
-        if content 
-            | !{content}
+        nav
+            if topic
+                a(href="/topic/"+ topic.name).centered-text #{topic.name}
+        article
+            header
+                if title
+                    h1.centered-text.title #{title}
+                if author
+                    h2.description.centered-text.author #{author}
+                if date
+                    h3.description.centered-text #{moment(date).locale("ru").format('LLL')}
+                if originalUrl
+                    a.centered-text(href=originalUrl) Оригинальная статья 
+            section.content
+                if content 
+                    | !{content}
 
         if comments[0]
             #comments
                 h1.centered-text(style="margin-top: 20px") Комментарии
                 each comment in comments
-                    .comment(style="margin:10px auto; padding: 10px;  background: #fff") 
+                    .comment(id=comment.id, style="margin:10px auto; padding: 10px;  background: #fff") 
                         h3 !{comment.title}
                         h4.description #{comment.author} - #{moment(comment.lastUpdate).locale("ru").fromNow()}
 

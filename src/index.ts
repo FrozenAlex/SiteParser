@@ -10,7 +10,7 @@ import * as koaStatic from "koa-static";
 import { createConnection, getRepository } from "typeorm";
 import Cookie from "./entity/Cookie";
 import * as Router from "koa-router";
-import { parseArticle, parseType, parseArticleList } from "./parsers";
+import { parseArticle, parseType, parseArticleList, cleanUpText } from "./parsers";
 import { getPage } from "./auth";
 import StartBot from "./bot/telegram";
 import Topic from "./entity/Topic";
@@ -45,7 +45,10 @@ const pug = new Pug({
 		/* variables and helpers */
 	},
 	helperPath: [
-		{moment: require("moment")}
+		{
+			moment: require("moment"),
+			cleanUpText: cleanUpText
+		}
 	],
 	basedir: __dirname + "../views",
 	app: app, // Binding `ctx.render()`, equals to pug.use(app)
@@ -59,26 +62,26 @@ router.get("/", async (ctx, next) => {
 
 router.get("/topic/", async (ctx, next) => {
 	let topics = await getRepository(Topic).find();
-	
-	await ctx.render("topics", {topics});
+
+	await ctx.render("topics", { topics });
 });
 
 router.get("/topic/:name/", async (ctx, next) => {
 	let name = ctx.params.name;
-	let topic = await getRepository(Topic).findOne({name: name}, {});
+	let topic = await getRepository(Topic).findOne({ name: name }, {});
 	if (!topic) return ctx.render("Нет такого топика")
-	let posts = await getRepository(Post).find({where: {topic: topic},order:{lastUpdate:"DESC"}})
+	let posts = await getRepository(Post).find({ where: { topic: topic }, order: { lastUpdate: "DESC" } })
 	if (!posts) throw new Error("Нет статей")
 	topic.posts = posts;
-	await ctx.render("topicArticles", {topic});
+	await ctx.render("topicArticles", { topic });
 });
 
 router.get("/a/:url/", async (ctx, next) => {
 	let url = ctx.params.url;
-	let post = await getRepository(Post).findOne({url: url}, {
-		relations: ['topic','comments']
+	let post = await getRepository(Post).findOne({ url: url }, {
+		relations: ['topic', 'comments']
 	});
-	
+
 	await ctx.render("post", post);
 });
 
@@ -87,7 +90,7 @@ router.get("/a/", async (ctx, next) => {
 	let post = await getRepository(Post).find({
 		relations: ['topic', 'comments']
 	});
-	ctx.response.type="application/json"
+	ctx.response.type = "application/json"
 	ctx.response.body = JSON.stringify(post);
 });
 
@@ -96,7 +99,7 @@ router.get("/c/", async (ctx, next) => {
 	let post = await getRepository(Comment).find({
 		relations: ["post"]
 	});
-	ctx.response.type="application/json"
+	ctx.response.type = "application/json"
 	ctx.response.body = JSON.stringify(post);
 });
 
@@ -109,7 +112,7 @@ router.get("/content/:article", async (ctx, next) => {
 		if (type == "article") {
 			let page = await parseArticle(source);
 			await ctx.render("article", { ...page });
-		}	else {
+		} else {
 			let page = parseArticleList(source);
 			await ctx.render("list", { ...page });
 		}
@@ -132,7 +135,7 @@ router.get("/node/:article", async (ctx, next) => {
 		if (type == "article") {
 			let page = await parseArticle(source);
 			await ctx.render("article", { ...page });
-		}	else {
+		} else {
 			let page = parseArticleList(source);
 			await ctx.render("list", { ...page });
 		}
@@ -155,7 +158,7 @@ router.get("/node", async (ctx, next) => {
 		if (type == "article") {
 			let page = await parseArticle(source);
 			await ctx.render("article", { ...page });
-		}	else {
+		} else {
 			let page = parseArticleList(source);
 			await ctx.render("list", { ...page });
 		}
