@@ -8112,10 +8112,10 @@ postcss@^7.0.0, postcss@^7.0.1, postcss@^7.0.14, postcss@^7.0.16, postcss@^7.0.1
     source-map "^0.6.1"
     supports-color "^6.1.0"
 
-precompress@^6.2.4:
-  version "6.2.4"
-  resolved "https://registry.yarnpkg.com/precompress/-/precompress-6.2.4.tgz#9e6de0c43b7f54c919075c629e9c22891a8605f4"
-  integrity sha512-OX6ykR5E+jboom/Et9Wna1QkV43o7B+LY08/F3Tb7DOTgs0Oy169U3aJDsQfXS7O1P18aJI3QRgqsRCJuCa0gQ==
+precompress@^6.2.5:
+  version "6.2.5"
+  resolved "https://registry.yarnpkg.com/precompress/-/precompress-6.2.5.tgz#04fde4122888607d5ce3567c4d247643c8237549"
+  integrity sha512-mCCijAb7irW6ACeIy2M78ixS8U8N3gUoou3v1H+remoxv8aFdvjmRnR3T7olkJwwrELN/EPOd1KtQ0ygef/Fwg==
 
 prelude-ls@~1.1.2:
   version "1.1.2"
