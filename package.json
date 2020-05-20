@@ -21,7 +21,7 @@
     "qs": "^6.9.4",
     "telegraf": "^3.38.0",
     "turndown": "^6.0.0",
-    "typeorm": "^0.2.24"
+    "typeorm": "^0.2.25"
   },
   "scripts": {
     "start": "node ./dist/index.js",
