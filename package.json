@@ -6,7 +6,7 @@
   "dependencies": {
     "@babel/plugin-proposal-decorators": "^7.8.3",
     "@types/turndown": "^5.0.0",
-    "axios": "^0.21.1",
+    "axios": "^0.21.2",
     "cron": "^1.8.2",
     "dotenv": "^8.2.0",
     "koa": "^2.12.0",
